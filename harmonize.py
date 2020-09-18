@@ -316,6 +316,37 @@ def buffer_to_light(proc): #Potentially thread this into 2 processes?
         proc.stdin.flush()
         #verbose('Wrote message and flushed. Briefly waiting') #This will verbose after every send, spamming the console.
 
+
+def check_hdmi_for_input_stream():
+    cap = cv2.VideoCapture(0)
+    exit_program = True
+    if cap.isOpened:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
+        i = 0
+        i2 = 10
+        last_frame = None
+        last_set_length = 0
+        while i2 > 0:
+            while i < i2:
+                ret, frame = cap.read()
+                flattened_set = set(frame.flatten())
+                last_set_length = len(flattened_set)
+                verbose('last_set_length was {0}'.format(last_set_length))
+                if last_frame is not None:
+                    exit_program = last_set_length != 1
+                last_frame = flattened_set
+                if not exit_program:
+                    verbose('HDMI is not streaming something')
+                    break
+                i += 1
+            if last_set_length > 1:
+                verbose('HDMI is streaming something')
+                return
+            verbose('sleeping 1 second')
+            time.sleep(1)
+            i2 -= 1
+    exit(0)
+
 ######################################################
 ############### Initialization Area ##################
 ######################################################
@@ -323,6 +354,7 @@ def buffer_to_light(proc): #Potentially thread this into 2 processes?
 ######### Section executes video input and establishes the connection stream to bridge ##########
 try:
     try:
+        check_hdmi_for_input_stream()
         threads = list()
         verbose("Starting cv2input...")
         t = threading.Thread(target=cv2input_to_buffer)
